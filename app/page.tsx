@@ -90,7 +90,7 @@ export default function Home() {
 
   const basePrice = useMemo(() => {
     if (!frame || !channel) return 0;
-    if (channel === "insurance") return lens ? frames[frame].retail + insuranceLensRetail[lens] : 0;
+    if (channel === "insurance") return frames[frame].retail + (lens ? insuranceLensRetail[lens] : 0);
     if (!saleType) return 0;
     return saleType === "pof" ? frames[frame].retail / 2 : lens ? completePrices[lens][frame] : 0;
   }, [frame, channel, saleType, lens]);
@@ -179,8 +179,9 @@ export default function Home() {
         {!frame && <div className="empty-summary"><Glasses /><p>Start by selecting a frame collection.</p></div>}
         {channel && <div className="summary-row"><span>Sale source</span><strong>{channel === "insurance" ? insurance ? insuranceNames[insurance] : "Insurance" : "In-Store"}</strong></div>}
         {frame && <div className="summary-row"><span>Frame collection</span><strong>{frames[frame].name}</strong></div>}
+        {channel === "insurance" && frame && <div className="summary-row"><span>Frame charge</span><strong>{money(frames[frame].retail)}</strong></div>}
         {channel === "inStore" && saleType && <div className="summary-row"><span>{saleType === "pof" ? "POF sale" : lens ? lenses[lens].name : "Complete sale"}</span><strong>{basePrice ? money(basePrice) : "—"}</strong></div>}
-        {channel === "insurance" && lens && <div className="summary-row"><span>{insuranceApplied ? "Insurance price" : "Retail first pair"}</span><strong>{money(firstPairTotal)}</strong></div>}
+        {channel === "insurance" && lens && <div className="summary-row"><span>{insuranceApplied ? "Adjusted lenses / modifiers" : "Retail lenses / modifiers"}</span><strong>{money(firstPairTotal - frames[frame!].retail)}</strong></div>}
         {channel === "inStore" && selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; return <div className="summary-row modifier-summary" key={id}><span>{item.name}</span><strong>{item.price >= 0 ? "+" : "-"}{money(Math.abs(item.price))}</strong></div>; })}
         {wantsAdditional && additionalFrame && additionalLens && <><div className="summary-divider" /><div className="summary-row"><span>Additional frame: {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div><div className="summary-row"><span>Additional {lenses[additionalLens].name}</span><strong>{money(lenses[additionalLens].additional)}</strong></div></>}
         {additionalComplete && additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
