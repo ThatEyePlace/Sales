@@ -5,7 +5,7 @@ import { Check, ChevronRight, Clipboard, Glasses, ReceiptText, RotateCcw } from 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
-type Frame = "redGreen" | "navy" | "orange";
+type Frame = "redGreen" | "navy" | "orange" | "pof";
 type SaleType = "pof" | "complete";
 type Lens = "core" | "strong" | "clear";
 type Channel = "insurance" | "inStore";
@@ -15,6 +15,7 @@ const frames: Record<Frame, { name: string; retail: number; accent: string }> = 
   redGreen: { name: "RED / GREEN", retail: 100, accent: "split" },
   navy: { name: "NAVY", retail: 150, accent: "navy" },
   orange: { name: "ORANGE", retail: 300, accent: "orange" },
+  pof: { name: "POF", retail: 0, accent: "" },
 };
 const lenses: Record<Lens, { name: string; note: string; additional: number }> = {
   core: { name: "clear&CORE™", note: "Rx power 3.00 or less", additional: 149 },
@@ -22,9 +23,9 @@ const lenses: Record<Lens, { name: string; note: string; additional: number }> =
   clear: { name: "thin&CLEAR™", note: "Rx powers over 5.00", additional: 249 },
 };
 const completePrices: Record<Lens, Record<Frame, number>> = {
-  core: { redGreen: 250, navy: 275, orange: 350 },
-  strong: { redGreen: 300, navy: 325, orange: 400 },
-  clear: { redGreen: 400, navy: 425, orange: 500 },
+  core: { redGreen: 250, navy: 275, orange: 350, pof: 150 },
+  strong: { redGreen: 300, navy: 325, orange: 400, pof: 200 },
+  clear: { redGreen: 400, navy: 425, orange: 500, pof: 300 },
 };
 const insuranceLensRetail: Record<Lens, number> = { core: 300, strong: 400, clear: 600 };
 const insuranceNames: Record<Insurance, string> = { vsp: "VSP", eyemed: "EyeMed", misc: "Misc" };
@@ -52,14 +53,14 @@ function ChoiceCard({ active, title, detail, price, onClick, accent }: { active:
   </button>;
 }
 
-function ModifierGrid({ selected, onToggle, hidePof = false, multiplier = 1, insurancePrimary = false }: { selected: string[]; onToggle: (id: string) => void; hidePof?: boolean; multiplier?: number; insurancePrimary?: boolean }) {
+function ModifierGrid({ selected, onToggle, hidePof = false, multiplier = 1, insurancePrimary = false, secondPair = false }: { selected: string[]; onToggle: (id: string) => void; hidePof?: boolean; multiplier?: number; insurancePrimary?: boolean; secondPair?: boolean }) {
   return <div className="modifier-groups">
     {["VISION", "STYLE", "CONVENIENCE"].map((group) => {
       const options = modifiers.filter((item) => item.group === group && !(hidePof && item.id === "pof"));
       return <fieldset className="modifier-group" key={group}><legend>{group}</legend>
         {options.map((item) => {
-          const displayPrice = insurancePrimary && item.id === "standard" ? 150 : item.price * multiplier;
-          const displayName = insurancePrimary && item.id === "standard" ? "Anti-Reflective" : item.name;
+          const displayPrice = item.id === "standard" && secondPair ? 75 : insurancePrimary && item.id === "standard" ? 150 : item.price * multiplier;
+          const displayName = item.id === "standard" && (insurancePrimary || secondPair) ? "Anti-Reflective" : item.name;
           return <label className="modifier-row" key={item.id}>
             <Checkbox checked={selected.includes(item.id)} onCheckedChange={() => onToggle(item.id)} className="modifier-check" />
             <span>{displayName}</span><strong className={displayPrice < 0 ? "discount" : ""}>{displayPrice > 0 ? "+ " : "- "}{money(Math.abs(displayPrice))}</strong>
@@ -92,7 +93,7 @@ export default function Home() {
     return saleType === "pof" ? frames[frame].retail / 2 : lens ? completePrices[lens][frame] : 0;
   }, [frame, channel, saleType, lens]);
   const modifierTotal = useMemo(() => modifiers.filter((item) => selectedModifiers.includes(item.id)).reduce((sum, item) => sum + (channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price), 0), [selectedModifiers, channel]);
-  const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id)).reduce((sum, item) => sum + item.price, 0), [additionalModifiers]);
+  const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id) && item.id !== "pof").reduce((sum, item) => sum + (item.id === "standard" ? 75 : item.price), 0), [additionalModifiers]);
   const additionalBase = wantsAdditional && additionalLens ? lenses[additionalLens].additional : 0;
   const retailFirstPair = basePrice + modifierTotal;
   const insuranceFactor = insurance === "vsp" ? 0.35 : 0.45;
@@ -125,7 +126,7 @@ export default function Home() {
     if (channel === "inStore") selectedModifiers.forEach((id) => { const item = modifiers.find((option) => option.id === id); if (item) lines.push(`${item.name}: ${item.price >= 0 ? "+" : "-"}${money(Math.abs(item.price))}`); });
     if (wantsAdditional && additionalLens) {
       lines.push(`Additional pair — ${lenses[additionalLens].name}: ${money(additionalBase)}`);
-      additionalModifiers.forEach((id) => { const item = modifiers.find((option) => option.id === id); if (item) lines.push(`Additional pair ${item.name}: ${item.price >= 0 ? "+" : "-"}${money(Math.abs(item.price))}`); });
+      additionalModifiers.forEach((id) => { const item = modifiers.find((option) => option.id === id); if (item && item.id !== "pof") { const price = item.id === "standard" ? 75 : item.price; lines.push(`Additional pair ${item.id === "standard" ? "Anti-Reflective" : item.name}: ${price >= 0 ? "+" : "-"}${money(Math.abs(price))}`); } });
       lines.push("Additional pair requires the same prescription.");
     }
     lines.push(`TOTAL: ${money(total)}`); return lines;
@@ -146,7 +147,7 @@ export default function Home() {
           {(Object.keys(insuranceNames) as Insurance[]).map((id) => <ChoiceCard key={id} active={insurance === id} title={insuranceNames[id]} onClick={() => { setInsurance(id); invalidateInsurance(); }} />)}
         </div></section>}
         {channel && (channel === "inStore" || insurance) && <section className="step-card reveal"><div className="step-heading"><span>1</span><div><h2>Select the frame collection</h2><p>{channel === "insurance" ? "Insurance retail frame price." : "Retail price shown for reference."}</p></div></div><div className="choice-grid three">
-          {(Object.keys(frames) as Frame[]).map((id) => <ChoiceCard key={id} active={frame === id} title={frames[id].name} detail={`${money(frames[id].retail)} retail`} accent={frames[id].accent} onClick={() => { setFrame(id); invalidateInsurance(); }} />)}
+          {(Object.keys(frames) as Frame[]).filter((id) => channel === "insurance" || id !== "pof").map((id) => <ChoiceCard key={id} active={frame === id} title={frames[id].name} detail={id === "pof" ? "Patient's own frame" : `${money(frames[id].retail)} retail`} accent={frames[id].accent} onClick={() => { setFrame(id); invalidateInsurance(); }} />)}
         </div></section>}
         {channel === "inStore" && frame && <section className="step-card reveal"><div className="step-heading"><span>2</span><div><h2>What type of sale?</h2><p>Choose POF pricing or a complete pair.</p></div></div><div className="choice-grid two">
           <ChoiceCard active={saleType === "pof"} title="POF" detail="50% of frame retail" price={money(frames[frame].retail / 2)} onClick={() => selectSaleType("pof")} />
@@ -158,14 +159,14 @@ export default function Home() {
         {readyForModifiers && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "3" : saleType === "complete" ? "4" : "3"}</span><div><h2>Any modifiers?</h2><p>{channel === "insurance" ? "First-pair modifiers use insurance retail pricing." : "Each selected modifier changes the running total."}</p></div></div><div className="yes-no">
           <button type="button" className={wantsModifiers === false ? "active" : ""} onClick={() => { setWantsModifiers(false); setSelectedModifiers([]); invalidateInsurance(); }}>No modifiers</button>
           <button type="button" className={wantsModifiers === true ? "active" : ""} onClick={() => { setWantsModifiers(true); invalidateInsurance(); }}>Yes, select modifiers</button>
-        </div>{wantsModifiers && <ModifierGrid selected={selectedModifiers} hidePof={saleType === "pof"} multiplier={channel === "insurance" ? 2 : 1} insurancePrimary={channel === "insurance"} onToggle={(id) => { toggle(id, selectedModifiers, setSelectedModifiers); invalidateInsurance(); }} />}</section>}
+        </div>{wantsModifiers && <ModifierGrid selected={selectedModifiers} hidePof={channel === "insurance" || saleType === "pof"} multiplier={channel === "insurance" ? 2 : 1} insurancePrimary={channel === "insurance"} onToggle={(id) => { toggle(id, selectedModifiers, setSelectedModifiers); invalidateInsurance(); }} />}</section>}
         {channel === "insurance" && readyForModifiers && wantsModifiers !== null && <section className="step-card reveal"><div className="step-heading"><span>4</span><div><h2>Apply insurance</h2><p>Confirm the first-pair retail selections before adding another pair.</p></div></div><div className="insurance-apply"><div><span>Retail submitted</span><strong>{money(retailFirstPair)}</strong></div><button type="button" className={insuranceApplied ? "applied" : ""} onClick={() => setInsuranceApplied(true)}>{insuranceApplied ? "Insurance Applied" : "Apply Insurance"}</button></div></section>}
         {readyForAdditional && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "5" : saleType === "complete" ? "5" : "4"}</span><div><h2>Add another complete pair?</h2><p>Same prescription required. Modifiers still apply.</p></div></div><div className="yes-no">
           <button type="button" className={wantsAdditional === false ? "active" : ""} onClick={() => { setWantsAdditional(false); setAdditionalLens(null); setAdditionalModifiers([]); }}>No additional pair</button>
           <button type="button" className={wantsAdditional === true ? "active" : ""} onClick={() => { setWantsAdditional(true); setAdditionalLens(lens ?? "core"); }}>Yes, add a pair</button>
         </div>{wantsAdditional && <div className="additional-panel"><h3>Additional-pair package</h3><div className="choice-grid three lenses compact">
           {(Object.keys(lenses) as Lens[]).map((id) => <ChoiceCard key={id} active={additionalLens === id} title={lenses[id].name} price={money(lenses[id].additional)} onClick={() => setAdditionalLens(id)} />)}
-        </div><div className="additional-modifiers-title"><h3>Additional-pair modifiers</h3><p>Select only what applies to this pair.</p></div><ModifierGrid selected={additionalModifiers} onToggle={(id) => toggle(id, additionalModifiers, setAdditionalModifiers)} /></div>}</section>}
+        </div><div className="additional-modifiers-title"><h3>Additional-pair modifiers</h3><p>Select only what applies to this pair.</p></div><ModifierGrid selected={additionalModifiers} hidePof secondPair onToggle={(id) => toggle(id, additionalModifiers, setAdditionalModifiers)} /></div>}</section>}
       </section>
       <aside className="quote-card" aria-live="polite"><div className="quote-title"><ReceiptText aria-hidden="true" /><div><span>RUNNING QUOTE</span><strong>Sale Summary</strong></div></div><div className="summary-lines">
         {!frame && <div className="empty-summary"><Glasses /><p>Start by selecting a frame collection.</p></div>}
@@ -175,7 +176,7 @@ export default function Home() {
         {channel === "insurance" && lens && <div className="summary-row"><span>{insuranceApplied ? "Insurance price" : "Retail first pair"}</span><strong>{money(firstPairTotal)}</strong></div>}
         {channel === "inStore" && selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; return <div className="summary-row modifier-summary" key={id}><span>{item.name}</span><strong>{item.price >= 0 ? "+" : "-"}{money(Math.abs(item.price))}</strong></div>; })}
         {wantsAdditional && additionalLens && <><div className="summary-divider" /><div className="summary-row"><span>Additional {lenses[additionalLens].name}</span><strong>{money(additionalBase)}</strong></div></>}
-        {additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.name}</span><strong>{item.price >= 0 ? "+" : "-"}{money(Math.abs(item.price))}</strong></div>; })}
+        {additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
       </div><div className="total-row"><span>TOTAL</span><strong>{money(total)}</strong></div><Button className="copy-button" onClick={copyQuote} disabled={!frame}>{copied ? <Check /> : <Clipboard />}{copied ? "Copied" : "Copy Quote"}</Button><p className="quote-footnote">Every complete pair includes premium anti-reflective, scratch resistance, UV protection, and standard warranty unless modified.</p><div className="next-cue"><span>Complete each visible step</span><ChevronRight /></div></aside>
     </div>
   </main>;
