@@ -63,6 +63,11 @@ button { font: inherit; }
 .yes-no { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .yes-no button { min-height: 50px; border: 2px solid var(--line); border-radius: 13px; background: #fff; color: var(--navy); font-weight: 800; cursor: pointer; }
 .yes-no button.active { border-color: var(--navy); background: var(--navy); color: #fff; }
+.insurance-apply { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #f8fbfd; }
+.insurance-apply span { display: block; color: var(--muted); font-size: 13px; }
+.insurance-apply strong { display: block; margin-top: 2px; color: var(--navy); font-size: 26px; }
+.insurance-apply button { border: 0; border-radius: 12px; padding: 14px 22px; background: var(--orange); color: #fff; font-weight: 850; cursor: pointer; }
+.insurance-apply button.applied { background: #23825c; }
 .modifier-groups { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 13px; margin-top: 18px; }
 .modifier-group { min-width: 0; margin: 0; padding: 0 14px 10px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .modifier-group legend { padding: 0 8px; color: var(--navy); font-weight: 850; font-size: 12px; letter-spacing: .12em; }
