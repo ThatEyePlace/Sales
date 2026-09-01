@@ -82,6 +82,7 @@ export default function Home() {
   const [wantsModifiers, setWantsModifiers] = useState<boolean | null>(null);
   const [selectedModifiers, setSelectedModifiers] = useState<string[]>([]);
   const [wantsAdditional, setWantsAdditional] = useState<boolean | null>(null);
+  const [additionalFrame, setAdditionalFrame] = useState<Frame | null>(null);
   const [additionalLens, setAdditionalLens] = useState<Lens | null>(null);
   const [additionalModifiers, setAdditionalModifiers] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
@@ -94,25 +95,27 @@ export default function Home() {
   }, [frame, channel, saleType, lens]);
   const modifierTotal = useMemo(() => modifiers.filter((item) => selectedModifiers.includes(item.id)).reduce((sum, item) => sum + (channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price), 0), [selectedModifiers, channel]);
   const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id) && item.id !== "pof").reduce((sum, item) => sum + (item.id === "standard" ? 75 : item.price), 0), [additionalModifiers]);
-  const additionalBase = wantsAdditional && additionalLens ? lenses[additionalLens].additional : 0;
+  const additionalComplete = Boolean(wantsAdditional && additionalFrame && additionalLens);
+  const additionalFramePrice = wantsAdditional && additionalFrame ? frames[additionalFrame].retail / 2 : 0;
+  const additionalBase = additionalComplete && additionalLens ? lenses[additionalLens].additional + additionalFramePrice : 0;
   const retailFirstPair = basePrice + modifierTotal;
   const insuranceFactor = insurance === "vsp" ? 0.35 : 0.45;
   const firstPairTotal = channel === "insurance" && insuranceApplied && frame ? frames[frame].retail + (retailFirstPair - frames[frame].retail) * insuranceFactor : retailFirstPair;
-  const total = firstPairTotal + additionalBase + additionalModifierTotal;
+  const total = firstPairTotal + additionalBase + (additionalComplete ? additionalModifierTotal : 0);
   const readyForModifiers = channel === "insurance" ? Boolean(frame && insurance && lens) : Boolean(frame && saleType && (saleType === "pof" || lens));
   const readyForAdditional = readyForModifiers && wantsModifiers !== null && (channel !== "insurance" || insuranceApplied);
 
   const toggle = (id: string, current: string[], setter: (value: string[]) => void) => setter(current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   const selectSaleType = (next: SaleType) => {
-    setSaleType(next); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalLens(null); setAdditionalModifiers([]);
+    setSaleType(next); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]);
     if (next === "pof") setLens(null);
   };
   const selectChannel = (next: Channel) => {
-    setChannel(next); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalLens(null); setAdditionalModifiers([]);
+    setChannel(next); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]);
   };
-  const invalidateInsurance = () => { setInsuranceApplied(false); setWantsAdditional(null); setAdditionalLens(null); setAdditionalModifiers([]); };
+  const invalidateInsurance = () => { setInsuranceApplied(false); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); };
   const reset = () => {
-    setChannel(null); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalLens(null); setAdditionalModifiers([]); setCopied(false);
+    setChannel(null); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); setCopied(false);
   };
 
   const quoteLines = useMemo(() => {
@@ -124,13 +127,14 @@ export default function Home() {
     if (channel === "inStore" && saleType === "pof") lines.push(`POF sale: ${money(basePrice)}`);
     if (channel === "inStore" && saleType === "complete" && lens) lines.push(`Complete pair — ${lenses[lens].name}: ${money(basePrice)}`);
     if (channel === "inStore") selectedModifiers.forEach((id) => { const item = modifiers.find((option) => option.id === id); if (item) lines.push(`${item.name}: ${item.price >= 0 ? "+" : "-"}${money(Math.abs(item.price))}`); });
-    if (wantsAdditional && additionalLens) {
-      lines.push(`Additional pair — ${lenses[additionalLens].name}: ${money(additionalBase)}`);
+    if (wantsAdditional && additionalFrame && additionalLens) {
+      lines.push(`Additional pair frame — ${frames[additionalFrame].name}: ${money(additionalFramePrice)}`);
+      lines.push(`Additional pair lenses — ${lenses[additionalLens].name}: ${money(lenses[additionalLens].additional)}`);
       additionalModifiers.forEach((id) => { const item = modifiers.find((option) => option.id === id); if (item && item.id !== "pof") { const price = item.id === "standard" ? 75 : item.price; lines.push(`Additional pair ${item.id === "standard" ? "Anti-Reflective" : item.name}: ${price >= 0 ? "+" : "-"}${money(Math.abs(price))}`); } });
       lines.push("Additional pair requires the same prescription.");
     }
     lines.push(`TOTAL: ${money(total)}`); return lines;
-  }, [channel, insurance, frame, saleType, lens, basePrice, firstPairTotal, selectedModifiers, wantsAdditional, additionalLens, additionalBase, additionalModifiers, total]);
+  }, [channel, insurance, frame, saleType, lens, basePrice, firstPairTotal, selectedModifiers, wantsAdditional, additionalFrame, additionalFramePrice, additionalLens, additionalModifiers, total]);
 
   const copyQuote = async () => { await navigator.clipboard.writeText(quoteLines.join("\n")); setCopied(true); window.setTimeout(() => setCopied(false), 1800); };
 
@@ -162,9 +166,11 @@ export default function Home() {
         </div>{wantsModifiers && <ModifierGrid selected={selectedModifiers} hidePof={channel === "insurance" || saleType === "pof"} multiplier={channel === "insurance" ? 2 : 1} insurancePrimary={channel === "insurance"} onToggle={(id) => { toggle(id, selectedModifiers, setSelectedModifiers); invalidateInsurance(); }} />}</section>}
         {channel === "insurance" && readyForModifiers && wantsModifiers !== null && <section className="step-card reveal"><div className="step-heading"><span>4</span><div><h2>Apply insurance</h2><p>Confirm the first-pair retail selections before adding another pair.</p></div></div><div className="insurance-apply"><div><span>Retail submitted</span><strong>{money(retailFirstPair)}</strong></div><button type="button" className={insuranceApplied ? "applied" : ""} onClick={() => setInsuranceApplied(true)}>{insuranceApplied ? "Insurance Applied" : "Apply Insurance"}</button></div></section>}
         {readyForAdditional && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "5" : saleType === "complete" ? "5" : "4"}</span><div><h2>Add another complete pair?</h2><p>Same prescription required. Modifiers still apply.</p></div></div><div className="yes-no">
-          <button type="button" className={wantsAdditional === false ? "active" : ""} onClick={() => { setWantsAdditional(false); setAdditionalLens(null); setAdditionalModifiers([]); }}>No additional pair</button>
-          <button type="button" className={wantsAdditional === true ? "active" : ""} onClick={() => { setWantsAdditional(true); setAdditionalLens(lens ?? "core"); }}>Yes, add a pair</button>
-        </div>{wantsAdditional && <div className="additional-panel"><h3>Additional-pair package</h3><div className="choice-grid three lenses compact">
+          <button type="button" className={wantsAdditional === false ? "active" : ""} onClick={() => { setWantsAdditional(false); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); }}>No additional pair</button>
+          <button type="button" className={wantsAdditional === true ? "active" : ""} onClick={() => { setWantsAdditional(true); setAdditionalFrame(null); setAdditionalLens(lens ?? "core"); }}>Yes, add a pair</button>
+        </div>{wantsAdditional && <div className="additional-panel"><h3>Additional-pair frame</h3><div className="choice-grid three lenses compact">
+          {(Object.keys(frames) as Frame[]).map((id) => <ChoiceCard key={id} active={additionalFrame === id} title={frames[id].name} detail={id === "pof" ? "Patient's own frame" : "50% of retail"} price={money(frames[id].retail / 2)} onClick={() => setAdditionalFrame(id)} />)}
+        </div><h3>Additional-pair lens package</h3><div className="choice-grid three lenses compact">
           {(Object.keys(lenses) as Lens[]).map((id) => <ChoiceCard key={id} active={additionalLens === id} title={lenses[id].name} price={money(lenses[id].additional)} onClick={() => setAdditionalLens(id)} />)}
         </div><div className="additional-modifiers-title"><h3>Additional-pair modifiers</h3><p>Select only what applies to this pair.</p></div><ModifierGrid selected={additionalModifiers} hidePof secondPair onToggle={(id) => toggle(id, additionalModifiers, setAdditionalModifiers)} /></div>}</section>}
       </section>
@@ -175,8 +181,8 @@ export default function Home() {
         {channel === "inStore" && saleType && <div className="summary-row"><span>{saleType === "pof" ? "POF sale" : lens ? lenses[lens].name : "Complete sale"}</span><strong>{basePrice ? money(basePrice) : "—"}</strong></div>}
         {channel === "insurance" && lens && <div className="summary-row"><span>{insuranceApplied ? "Insurance price" : "Retail first pair"}</span><strong>{money(firstPairTotal)}</strong></div>}
         {channel === "inStore" && selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; return <div className="summary-row modifier-summary" key={id}><span>{item.name}</span><strong>{item.price >= 0 ? "+" : "-"}{money(Math.abs(item.price))}</strong></div>; })}
-        {wantsAdditional && additionalLens && <><div className="summary-divider" /><div className="summary-row"><span>Additional {lenses[additionalLens].name}</span><strong>{money(additionalBase)}</strong></div></>}
-        {additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        {wantsAdditional && additionalFrame && additionalLens && <><div className="summary-divider" /><div className="summary-row"><span>Additional frame: {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div><div className="summary-row"><span>Additional {lenses[additionalLens].name}</span><strong>{money(lenses[additionalLens].additional)}</strong></div></>}
+        {additionalComplete && additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
       </div><div className="total-row"><span>TOTAL</span><strong>{money(total)}</strong></div><Button className="copy-button" onClick={copyQuote} disabled={!frame}>{copied ? <Check /> : <Clipboard />}{copied ? "Copied" : "Copy Quote"}</Button><p className="quote-footnote">Every complete pair includes premium anti-reflective, scratch resistance, UV protection, and standard warranty unless modified.</p><div className="next-cue"><span>Complete each visible step</span><ChevronRight /></div></aside>
     </div>
   </main>;
