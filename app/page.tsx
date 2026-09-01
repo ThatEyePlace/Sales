@@ -17,6 +17,7 @@ const frames: Record<Frame, { name: string; retail: number; accent: string }> = 
   orange: { name: "ORANGE", retail: 300, accent: "orange" },
   pof: { name: "POF", retail: 0, accent: "" },
 };
+const secondPairFramePrices: Record<Frame, number> = { redGreen: 25, navy: 50, orange: 100, pof: 0 };
 const lenses: Record<Lens, { name: string; note: string; additional: number }> = {
   core: { name: "clear&CORE™", note: "Rx power 3.00 or less", additional: 149 },
   strong: { name: "thin&STRONG™", note: "Rx powers up to 5.00 or safety use", additional: 179 },
@@ -96,7 +97,7 @@ export default function Home() {
   const modifierTotal = useMemo(() => modifiers.filter((item) => selectedModifiers.includes(item.id)).reduce((sum, item) => sum + (channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price), 0), [selectedModifiers, channel]);
   const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id) && item.id !== "pof").reduce((sum, item) => sum + (item.id === "standard" ? 75 : item.price), 0), [additionalModifiers]);
   const additionalComplete = Boolean(wantsAdditional && additionalFrame && additionalLens);
-  const additionalFramePrice = wantsAdditional && additionalFrame ? frames[additionalFrame].retail / 2 : 0;
+  const additionalFramePrice = wantsAdditional && additionalFrame ? secondPairFramePrices[additionalFrame] : 0;
   const additionalBase = additionalComplete && additionalLens ? lenses[additionalLens].additional + additionalFramePrice : 0;
   const retailFirstPair = basePrice + modifierTotal;
   const insuranceFactor = insurance === "vsp" ? 0.35 : 0.45;
@@ -169,7 +170,7 @@ export default function Home() {
           <button type="button" className={wantsAdditional === false ? "active" : ""} onClick={() => { setWantsAdditional(false); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); }}>No additional pair</button>
           <button type="button" className={wantsAdditional === true ? "active" : ""} onClick={() => { setWantsAdditional(true); setAdditionalFrame(null); setAdditionalLens(lens ?? "core"); }}>Yes, add a pair</button>
         </div>{wantsAdditional && <div className="additional-panel"><h3>Additional-pair frame</h3><div className="choice-grid three lenses compact">
-          {(Object.keys(frames) as Frame[]).map((id) => <ChoiceCard key={id} active={additionalFrame === id} title={frames[id].name} detail={id === "pof" ? "Patient's own frame" : "50% of retail"} price={money(frames[id].retail / 2)} onClick={() => setAdditionalFrame(id)} />)}
+          {(Object.keys(frames) as Frame[]).map((id) => <ChoiceCard key={id} active={additionalFrame === id} title={frames[id].name} detail={id === "pof" ? "Patient's own frame" : "Second-pair frame price"} price={money(secondPairFramePrices[id])} onClick={() => setAdditionalFrame(id)} />)}
         </div><h3>Additional-pair lens package</h3><div className="choice-grid three lenses compact">
           {(Object.keys(lenses) as Lens[]).map((id) => <ChoiceCard key={id} active={additionalLens === id} title={lenses[id].name} price={money(lenses[id].additional)} onClick={() => setAdditionalLens(id)} />)}
         </div><div className="additional-modifiers-title"><h3>Additional-pair modifiers</h3><p>Select only what applies to this pair.</p></div><ModifierGrid selected={additionalModifiers} hidePof secondPair onToggle={(id) => toggle(id, additionalModifiers, setAdditionalModifiers)} /></div>}</section>}
