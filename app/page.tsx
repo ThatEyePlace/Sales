@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronRight, Clipboard, Glasses, ReceiptText, RotateCcw } from "lucide-react";
+import { Check, ChevronRight, Glasses, Printer, ReceiptText, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -86,7 +86,6 @@ export default function Home() {
   const [additionalFrame, setAdditionalFrame] = useState<Frame | null>(null);
   const [additionalLens, setAdditionalLens] = useState<Lens | null>(null);
   const [additionalModifiers, setAdditionalModifiers] = useState<string[]>([]);
-  const [copied, setCopied] = useState(false);
 
   const basePrice = useMemo(() => {
     if (!frame || !channel) return 0;
@@ -105,6 +104,7 @@ export default function Home() {
   const total = firstPairTotal + additionalBase + (additionalComplete ? additionalModifierTotal : 0);
   const readyForModifiers = channel === "insurance" ? Boolean(frame && insurance && lens) : Boolean(frame && saleType && (saleType === "pof" || lens));
   const readyForAdditional = readyForModifiers && wantsModifiers !== null && (channel !== "insurance" || insuranceApplied);
+  const canPrint = channel === "insurance" ? Boolean(insuranceApplied && frame && lens) : Boolean(readyForModifiers && wantsModifiers !== null);
 
   const toggle = (id: string, current: string[], setter: (value: string[]) => void) => setter(current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   const selectSaleType = (next: SaleType) => {
@@ -116,28 +116,8 @@ export default function Home() {
   };
   const invalidateInsurance = () => { setInsuranceApplied(false); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); };
   const reset = () => {
-    setChannel(null); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); setCopied(false);
+    setChannel(null); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]);
   };
-
-  const quoteLines = useMemo(() => {
-    const lines: string[] = ["THAT EYE PLACE — SALES QUOTE"];
-    if (channel) lines.push(`Sale source: ${channel === "insurance" ? "Insurance" : "In-Store"}`);
-    if (insurance) lines.push(`Insurance: ${insuranceNames[insurance]}`);
-    if (frame) lines.push(`Frame: ${frames[frame].name}`);
-    if (channel === "insurance" && lens) lines.push(`Insurance-adjusted first pair — ${lenses[lens].name}: ${money(firstPairTotal)}`);
-    if (channel === "inStore" && saleType === "pof") lines.push(`POF sale: ${money(basePrice)}`);
-    if (channel === "inStore" && saleType === "complete" && lens) lines.push(`Complete pair — ${lenses[lens].name}: ${money(basePrice)}`);
-    if (channel === "inStore") selectedModifiers.forEach((id) => { const item = modifiers.find((option) => option.id === id); if (item) lines.push(`${item.name}: ${item.price >= 0 ? "+" : "-"}${money(Math.abs(item.price))}`); });
-    if (wantsAdditional && additionalFrame && additionalLens) {
-      lines.push(`Additional pair frame — ${frames[additionalFrame].name}: ${money(additionalFramePrice)}`);
-      lines.push(`Additional pair lenses — ${lenses[additionalLens].name}: ${money(lenses[additionalLens].additional)}`);
-      additionalModifiers.forEach((id) => { const item = modifiers.find((option) => option.id === id); if (item && item.id !== "pof") { const price = item.id === "standard" ? 75 : item.price; lines.push(`Additional pair ${item.id === "standard" ? "Anti-Reflective" : item.name}: ${price >= 0 ? "+" : "-"}${money(Math.abs(price))}`); } });
-      lines.push("Additional pair requires the same prescription.");
-    }
-    lines.push(`TOTAL: ${money(total)}`); return lines;
-  }, [channel, insurance, frame, saleType, lens, basePrice, firstPairTotal, selectedModifiers, wantsAdditional, additionalFrame, additionalFramePrice, additionalLens, additionalModifiers, total]);
-
-  const copyQuote = async () => { await navigator.clipboard.writeText(quoteLines.join("\n")); setCopied(true); window.setTimeout(() => setCopied(false), 1800); };
 
   return <main>
     <header className="topbar"><div className="brand"><div className="brand-mark"><Glasses aria-hidden="true" /></div><div><span>THAT EYE PLACE</span><strong>Sales Pricing</strong></div></div><Button variant="outline" onClick={reset} className="reset-button"><RotateCcw /> Start Over</Button></header>
@@ -185,7 +165,26 @@ export default function Home() {
         {channel === "inStore" && selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; return <div className="summary-row modifier-summary" key={id}><span>{item.name}</span><strong>{item.price >= 0 ? "+" : "-"}{money(Math.abs(item.price))}</strong></div>; })}
         {wantsAdditional && additionalFrame && additionalLens && <><div className="summary-divider" /><div className="summary-row"><span>Additional frame: {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div><div className="summary-row"><span>Additional {lenses[additionalLens].name}</span><strong>{money(lenses[additionalLens].additional)}</strong></div></>}
         {additionalComplete && additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
-      </div><div className="total-row"><span>TOTAL</span><strong>{money(total)}</strong></div><Button className="copy-button" onClick={copyQuote} disabled={!frame}>{copied ? <Check /> : <Clipboard />}{copied ? "Copied" : "Copy Quote"}</Button><p className="quote-footnote">Every complete pair includes premium anti-reflective, scratch resistance, UV protection, and standard warranty unless modified.</p><div className="next-cue"><span>Complete each visible step</span><ChevronRight /></div></aside>
+      </div><div className="total-row"><span>TOTAL</span><strong>{money(total)}</strong></div><Button className="copy-button" onClick={() => window.print()} disabled={!canPrint}><Printer />Print / Save PDF</Button><p className="quote-footnote">Every complete pair includes premium anti-reflective, scratch resistance, UV protection, and standard warranty unless modified.</p><div className="next-cue"><span>Complete each visible step</span><ChevronRight /></div></aside>
     </div>
+    <section className="print-quote" aria-label="Printable sales quote">
+      <header className="print-header"><div className="print-brand"><Glasses aria-hidden="true" /><div><strong>THAT EYE PLACE</strong><span>Sales Quote</span></div></div><div className="print-date">Prepared {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div></header>
+      <div className="print-meta"><div><span>Pricing</span><strong>{channel === "insurance" ? insurance ? insuranceNames[insurance] : "Insurance" : "In-Store"}</strong></div><div><span>Frame collection</span><strong>{frame ? frames[frame].name : "—"}</strong></div></div>
+      <section className="print-section"><h2>First Pair</h2>
+        {channel === "insurance" && frame && <div className="print-line"><span>Frame — {frames[frame].name}</span><strong>{money(frames[frame].retail)}</strong></div>}
+        {channel === "insurance" && lens && <div className="print-line"><span>{lenses[lens].name} lenses</span><strong>{money(insuranceLensRetail[lens] * (insuranceApplied ? insuranceFactor : 1))}</strong></div>}
+        {channel === "inStore" && saleType && <div className="print-line"><span>{saleType === "pof" ? `POF sale — ${frame ? frames[frame].name : ""}` : `${lens ? lenses[lens].name : "Complete"} complete pair`}</span><strong>{money(basePrice)}</strong></div>}
+        {selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const retail = channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price; const price = channel === "insurance" && insuranceApplied ? retail * insuranceFactor : retail; const name = channel === "insurance" && item.id === "standard" ? "Anti-Reflective" : item.name; return <div className="print-line print-option" key={`print-${id}`}><span>{name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        <div className="print-subtotal"><span>First-pair total</span><strong>{money(firstPairTotal)}</strong></div>
+      </section>
+      {additionalComplete && additionalFrame && additionalLens && <section className="print-section"><h2>Additional Pair</h2>
+        <div className="print-line"><span>Frame — {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div>
+        <div className="print-line"><span>{lenses[additionalLens].name} lenses</span><strong>{money(lenses[additionalLens].additional)}</strong></div>
+        {additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="print-line print-option" key={`print-additional-${id}`}><span>{item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        <div className="print-subtotal"><span>Additional-pair total</span><strong>{money(additionalBase + additionalModifierTotal)}</strong></div><p className="print-note">Same prescription required. Modifiers still apply.</p>
+      </section>}
+      <div className="print-total"><span>TOTAL</span><strong>{money(total)}</strong></div>
+      <footer className="print-footer"><strong>Complete-pair benefits</strong><p>Premium anti-reflective, scratch resistance, UV protection, and standard warranty are included unless modified.</p><div className="print-signatures"><span>Customer approval</span><span>Date</span></div></footer>
+    </section>
   </main>;
 }
