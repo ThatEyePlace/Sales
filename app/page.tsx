@@ -24,15 +24,14 @@ const lenses: Record<Lens, { name: string; note: string; additional: number }> =
   clear: { name: "thin&CLEAR™", note: "Rx powers over 5.00", additional: 249 },
 };
 const completePrices: Record<Lens, Record<Frame, number>> = {
-  core: { redGreen: 250, navy: 275, orange: 350, pof: 150 },
-  strong: { redGreen: 300, navy: 325, orange: 400, pof: 200 },
-  clear: { redGreen: 400, navy: 425, orange: 500, pof: 300 },
+  core: { redGreen: 250, navy: 275, orange: 350, pof: 200 },
+  strong: { redGreen: 300, navy: 325, orange: 400, pof: 250 },
+  clear: { redGreen: 400, navy: 425, orange: 500, pof: 350 },
 };
 const insuranceLensRetail: Record<Lens, number> = { core: 300, strong: 400, clear: 600 };
 const insuranceNames: Record<Insurance, string> = { vsp: "VSP", eyemed: "EyeMed", misc: "Misc" };
 const modifiers = [
   { id: "standard", name: "Standard Finish (No AR)", price: -75, group: "VISION" },
-  { id: "pof", name: "POF", price: -50, group: "VISION" },
   { id: "shift", name: "Shift™", price: 90, group: "VISION" },
   { id: "multifocal", name: "Multifocal", price: 50, group: "VISION" },
   { id: "mirror", name: "Mirror / Solid Tint", price: 50, group: "STYLE" },
@@ -54,10 +53,10 @@ function ChoiceCard({ active, title, detail, price, onClick, accent }: { active:
   </button>;
 }
 
-function ModifierGrid({ selected, onToggle, hidePof = false, multiplier = 1, insurancePrimary = false, secondPair = false }: { selected: string[]; onToggle: (id: string) => void; hidePof?: boolean; multiplier?: number; insurancePrimary?: boolean; secondPair?: boolean }) {
+function ModifierGrid({ selected, onToggle, multiplier = 1, insurancePrimary = false, secondPair = false }: { selected: string[]; onToggle: (id: string) => void; multiplier?: number; insurancePrimary?: boolean; secondPair?: boolean }) {
   return <div className="modifier-groups">
     {["VISION", "STYLE", "CONVENIENCE"].map((group) => {
-      const options = modifiers.filter((item) => item.group === group && !(hidePof && item.id === "pof"));
+      const options = modifiers.filter((item) => item.group === group);
       return <fieldset className="modifier-group" key={group}><legend>{group}</legend>
         {options.map((item) => {
           const displayPrice = item.id === "standard" && secondPair ? 75 : insurancePrimary && item.id === "standard" ? 150 : item.price * multiplier;
@@ -67,7 +66,6 @@ function ModifierGrid({ selected, onToggle, hidePof = false, multiplier = 1, ins
             <span>{displayName}</span><strong className={displayPrice < 0 ? "discount" : ""}>{displayPrice > 0 ? "+ " : "- "}{money(Math.abs(displayPrice))}</strong>
           </label>;
         })}
-        {group === "VISION" && hidePof && <p className="included-note">POF pricing is already applied to this sale.</p>}
       </fieldset>;
     })}
   </div>;
@@ -94,7 +92,7 @@ export default function Home() {
     return saleType === "pof" ? frames[frame].retail / 2 : lens ? completePrices[lens][frame] : 0;
   }, [frame, channel, saleType, lens]);
   const modifierTotal = useMemo(() => modifiers.filter((item) => selectedModifiers.includes(item.id)).reduce((sum, item) => sum + (channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price), 0), [selectedModifiers, channel]);
-  const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id) && item.id !== "pof").reduce((sum, item) => sum + (item.id === "standard" ? 75 : item.price), 0), [additionalModifiers]);
+  const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id)).reduce((sum, item) => sum + (item.id === "standard" ? 75 : item.price), 0), [additionalModifiers]);
   const additionalComplete = Boolean(wantsAdditional && additionalFrame && additionalLens);
   const additionalFramePrice = wantsAdditional && additionalFrame ? secondPairFramePrices[additionalFrame] : 0;
   const additionalBase = additionalComplete && additionalLens ? lenses[additionalLens].additional + additionalFramePrice : 0;
@@ -132,9 +130,9 @@ export default function Home() {
           {(Object.keys(insuranceNames) as Insurance[]).map((id) => <ChoiceCard key={id} active={insurance === id} title={insuranceNames[id]} onClick={() => { setInsurance(id); invalidateInsurance(); }} />)}
         </div></section>}
         {channel && (channel === "inStore" || insurance) && <section className="step-card reveal"><div className="step-heading"><span>1</span><div><h2>Select the frame collection</h2><p>{channel === "insurance" ? "Insurance retail frame price." : "Retail price shown for reference."}</p></div></div><div className="choice-grid three">
-          {(Object.keys(frames) as Frame[]).filter((id) => channel === "insurance" || id !== "pof").map((id) => <ChoiceCard key={id} active={frame === id} title={frames[id].name} detail={id === "pof" ? "Patient's own frame" : `${money(frames[id].retail)} retail`} accent={frames[id].accent} onClick={() => { setFrame(id); invalidateInsurance(); }} />)}
+          {(Object.keys(frames) as Frame[]).map((id) => <ChoiceCard key={id} active={frame === id} title={frames[id].name} detail={id === "pof" ? channel === "inStore" ? "Patient's own frame · $50 off complete pair" : "Patient's own frame" : `${money(frames[id].retail)} retail`} accent={frames[id].accent} onClick={() => { setFrame(id); invalidateInsurance(); if (channel === "inStore" && id === "pof") selectSaleType("complete"); }} />)}
         </div></section>}
-        {channel === "inStore" && frame && <section className="step-card reveal"><div className="step-heading"><span>2</span><div><h2>What type of sale?</h2><p>Choose POF pricing or a complete pair.</p></div></div><div className="choice-grid two">
+        {channel === "inStore" && frame && frame !== "pof" && <section className="step-card reveal"><div className="step-heading"><span>2</span><div><h2>What type of sale?</h2><p>Choose POF pricing or a complete pair.</p></div></div><div className="choice-grid two">
           <ChoiceCard active={saleType === "pof"} title="POF" detail="50% of frame retail" price={money(frames[frame].retail / 2)} onClick={() => selectSaleType("pof")} />
           <ChoiceCard active={saleType === "complete"} title="COMPLETE SALE" detail="Frame + complete lenses" onClick={() => selectSaleType("complete")} />
         </div></section>}
@@ -144,7 +142,7 @@ export default function Home() {
         {readyForModifiers && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "3" : saleType === "complete" ? "4" : "3"}</span><div><h2>Any modifiers?</h2><p>{channel === "insurance" ? "First-pair modifiers use insurance retail pricing." : "Each selected modifier changes the running total."}</p></div></div><div className="yes-no">
           <button type="button" className={wantsModifiers === false ? "active" : ""} onClick={() => { setWantsModifiers(false); setSelectedModifiers([]); invalidateInsurance(); }}>No modifiers</button>
           <button type="button" className={wantsModifiers === true ? "active" : ""} onClick={() => { setWantsModifiers(true); invalidateInsurance(); }}>Yes, select modifiers</button>
-        </div>{wantsModifiers && <ModifierGrid selected={selectedModifiers} hidePof={channel === "insurance" || saleType === "pof"} multiplier={channel === "insurance" ? 2 : 1} insurancePrimary={channel === "insurance"} onToggle={(id) => { toggle(id, selectedModifiers, setSelectedModifiers); invalidateInsurance(); }} />}</section>}
+        </div>{wantsModifiers && <ModifierGrid selected={selectedModifiers} multiplier={channel === "insurance" ? 2 : 1} insurancePrimary={channel === "insurance"} onToggle={(id) => { toggle(id, selectedModifiers, setSelectedModifiers); invalidateInsurance(); }} />}</section>}
         {channel === "insurance" && readyForModifiers && wantsModifiers !== null && <section className="step-card reveal"><div className="step-heading"><span>4</span><div><h2>Apply insurance</h2><p>Confirm the first-pair retail selections before adding another pair.</p></div></div><div className="insurance-apply"><div><span>Retail submitted</span><strong>{money(retailFirstPair)}</strong></div><button type="button" className={insuranceApplied ? "applied" : ""} onClick={() => setInsuranceApplied(true)}>{insuranceApplied ? "Insurance Applied" : "Apply Insurance"}</button></div></section>}
         {readyForAdditional && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "5" : saleType === "complete" ? "5" : "4"}</span><div><h2>Add another complete pair?</h2><p>Same prescription required. Modifiers still apply.</p></div></div><div className="yes-no">
           <button type="button" className={wantsAdditional === false ? "active" : ""} onClick={() => { setWantsAdditional(false); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); }}>No additional pair</button>
@@ -153,7 +151,7 @@ export default function Home() {
           {(Object.keys(frames) as Frame[]).map((id) => <ChoiceCard key={id} active={additionalFrame === id} title={frames[id].name} detail={id === "pof" ? "Patient's own frame" : "Second-pair frame price"} price={money(secondPairFramePrices[id])} onClick={() => setAdditionalFrame(id)} />)}
         </div><h3>Additional-pair lens package</h3><div className="choice-grid three lenses compact">
           {(Object.keys(lenses) as Lens[]).map((id) => <ChoiceCard key={id} active={additionalLens === id} title={lenses[id].name} price={money(lenses[id].additional)} onClick={() => setAdditionalLens(id)} />)}
-        </div><div className="additional-modifiers-title"><h3>Additional-pair modifiers</h3><p>Select only what applies to this pair.</p></div><ModifierGrid selected={additionalModifiers} hidePof secondPair onToggle={(id) => toggle(id, additionalModifiers, setAdditionalModifiers)} /></div>}</section>}
+        </div><div className="additional-modifiers-title"><h3>Additional-pair modifiers</h3><p>Select only what applies to this pair.</p></div><ModifierGrid selected={additionalModifiers} secondPair onToggle={(id) => toggle(id, additionalModifiers, setAdditionalModifiers)} /></div>}</section>}
       </section>
       <aside className="quote-card" aria-live="polite"><div className="quote-title"><ReceiptText aria-hidden="true" /><div><span>RUNNING QUOTE</span><strong>Sale Summary</strong></div></div><div className="summary-lines">
         {!frame && <div className="empty-summary"><Glasses /><p>Start by selecting a frame collection.</p></div>}
@@ -164,7 +162,7 @@ export default function Home() {
         {channel === "insurance" && lens && <div className="summary-row"><span>{insuranceApplied ? "Adjusted lenses / modifiers" : "Retail lenses / modifiers"}</span><strong>{money(firstPairTotal - frames[frame!].retail)}</strong></div>}
         {channel === "inStore" && selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; return <div className="summary-row modifier-summary" key={id}><span>{item.name}</span><strong>{item.price >= 0 ? "+" : "-"}{money(Math.abs(item.price))}</strong></div>; })}
         {wantsAdditional && additionalFrame && additionalLens && <><div className="summary-divider" /><div className="summary-row"><span>Additional frame: {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div><div className="summary-row"><span>Additional {lenses[additionalLens].name}</span><strong>{money(lenses[additionalLens].additional)}</strong></div></>}
-        {additionalComplete && additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        {additionalComplete && additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
       </div><div className="total-row"><span>TOTAL</span><strong>{money(total)}</strong></div><Button className="copy-button" onClick={() => window.print()} disabled={!canPrint}><Printer />Print / Save PDF</Button><p className="quote-footnote">Every complete pair includes premium anti-reflective, scratch resistance, UV protection, and standard warranty unless modified.</p><div className="next-cue"><span>Complete each visible step</span><ChevronRight /></div></aside>
     </div>
     <section className="print-quote" aria-label="Printable sales quote">
@@ -180,7 +178,7 @@ export default function Home() {
       {additionalComplete && additionalFrame && additionalLens && <section className="print-section"><h2>Additional Pair</h2>
         <div className="print-line"><span>Frame — {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div>
         <div className="print-line"><span>{lenses[additionalLens].name} lenses</span><strong>{money(lenses[additionalLens].additional)}</strong></div>
-        {additionalModifiers.filter((id) => id !== "pof").map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="print-line print-option" key={`print-additional-${id}`}><span>{item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        {additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price; return <div className="print-line print-option" key={`print-additional-${id}`}><span>{item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
         <div className="print-subtotal"><span>Additional-pair total</span><strong>{money(additionalBase + additionalModifierTotal)}</strong></div><p className="print-note">Same prescription required. Modifiers still apply.</p>
       </section>}
       <div className="print-total"><span>TOTAL</span><strong>{money(total)}</strong></div>
