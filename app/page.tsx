@@ -96,7 +96,7 @@ export default function Home() {
   const additionalBase = wantsAdditional && additionalLens ? lenses[additionalLens].additional : 0;
   const retailFirstPair = basePrice + modifierTotal;
   const insuranceFactor = insurance === "vsp" ? 0.35 : 0.45;
-  const firstPairTotal = channel === "insurance" && insuranceApplied ? retailFirstPair * insuranceFactor : retailFirstPair;
+  const firstPairTotal = channel === "insurance" && insuranceApplied && frame ? frames[frame].retail + (retailFirstPair - frames[frame].retail) * insuranceFactor : retailFirstPair;
   const total = firstPairTotal + additionalBase + additionalModifierTotal;
   const readyForModifiers = channel === "insurance" ? Boolean(frame && insurance && lens) : Boolean(frame && saleType && (saleType === "pof" || lens));
   const readyForAdditional = readyForModifiers && wantsModifiers !== null && (channel !== "insurance" || insuranceApplied);
