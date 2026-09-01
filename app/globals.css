@@ -106,5 +106,36 @@ button { font: inherit; }
 .quote-footnote { margin: 14px 24px 20px; color: #b9cce1; font-size: 11px; line-height: 1.5; }
 .next-cue { padding: 12px 24px; background: rgba(255,255,255,.06); display: flex; align-items: center; justify-content: space-between; color: #d6e2ef; font-size: 12px; }
 .next-cue svg { width: 16px; }
+.print-quote { display: none; }
 @media (max-width:1050px) { .app-shell { grid-template-columns: 1fr; } .quote-card { position: relative; top: auto; order: -1; } .summary-lines { min-height: 0; } .empty-summary { min-height: 90px; } }
 @media (max-width:760px) { .topbar { min-height: 68px; } .brand span { display: none; } .brand strong { font-size: 18px; } .brand-mark { width: 42px; height: 42px; } .reset-button { padding-inline: 10px; } .app-shell { width: min(100% - 22px,1480px); padding-top: 22px; } .choice-grid.three,.choice-grid.two,.modifier-groups { grid-template-columns: 1fr; } .choice-card { min-height: 78px; } .yes-no { grid-template-columns: 1fr; } .additional-modifiers-title { align-items: flex-start; flex-direction: column; } }
+@media print {
+  @page { size: letter; margin: .55in; }
+  body { background: #fff; color: #10243d; }
+  .topbar,.app-shell { display: none !important; }
+  .print-quote { display: block; font-family: Arial, sans-serif; }
+  .print-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 18px; border-bottom: 4px solid #ef4b12; }
+  .print-brand { display: flex; align-items: center; gap: 12px; }
+  .print-brand > svg { width: 42px; height: 42px; padding: 8px; border-radius: 10px; background: #082b58; color: #fff; }
+  .print-brand div { display: grid; gap: 2px; }
+  .print-brand strong { color: #082b58; font-size: 20px; letter-spacing: .08em; }
+  .print-brand span { color: #ef4b12; font-size: 15px; font-weight: 700; }
+  .print-date { color: #66768a; font-size: 12px; }
+  .print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+  .print-meta > div { padding: 12px 14px; border: 1px solid #d9e0e7; border-radius: 8px; display: grid; gap: 4px; }
+  .print-meta span { color: #66768a; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
+  .print-meta strong { color: #082b58; font-size: 15px; }
+  .print-section { margin-top: 18px; break-inside: avoid; }
+  .print-section h2 { margin: 0; padding: 9px 12px; background: #082b58; color: #fff; font-size: 15px; letter-spacing: .03em; }
+  .print-line,.print-subtotal { display: grid; grid-template-columns: 1fr auto; gap: 20px; padding: 10px 12px; border-bottom: 1px solid #d9e0e7; font-size: 13px; }
+  .print-option span { padding-left: 16px; color: #46586c; }
+  .print-subtotal { border-bottom: 0; background: #f3f6f9; color: #082b58; font-weight: 700; }
+  .print-note { margin: 8px 12px 0; color: #66768a; font-size: 11px; font-weight: 700; }
+  .print-total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 24px; padding: 15px 18px; border-top: 3px solid #ef4b12; background: #082b58; color: #fff; }
+  .print-total span { font-size: 12px; letter-spacing: .18em; font-weight: 700; }
+  .print-total strong { font-size: 28px; }
+  .print-footer { margin-top: 20px; padding-top: 14px; border-top: 1px solid #d9e0e7; color: #46586c; font-size: 11px; }
+  .print-footer p { margin: 4px 0 0; line-height: 1.45; }
+  .print-signatures { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-top: 38px; }
+  .print-signatures span { padding-top: 5px; border-top: 1px solid #10243d; }
+}
