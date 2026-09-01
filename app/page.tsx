@@ -58,7 +58,7 @@ function ModifierGrid({ selected, onToggle, multiplier = 1, insurancePrimary = f
       const options = modifiers.filter((item) => item.group === group);
       return <fieldset className="modifier-group" key={group}><legend>{group}</legend>
         {options.map((item) => {
-          const displayPrice = item.id === "standard" && secondPair ? 75 : insurancePrimary && item.id === "standard" ? 150 : secondPair ? item.price * 2 * 0.35 : item.price * multiplier;
+          const displayPrice = secondPair ? (item.id === "standard" ? 150 : item.price * 2) * 0.35 : insurancePrimary && item.id === "standard" ? 150 : item.price * multiplier;
           const displayName = item.id === "standard" && (insurancePrimary || secondPair) ? "Anti-Reflective" : item.name;
           return <label className="modifier-row" key={item.id}>
             <Checkbox checked={selected.includes(item.id)} onCheckedChange={() => onToggle(item.id)} className="modifier-check" />
@@ -91,7 +91,7 @@ export default function Home() {
     return saleType === "pof" ? frames[frame].retail / 2 : lens ? completePrices[lens][frame] : 0;
   }, [frame, channel, saleType, lens]);
   const modifierTotal = useMemo(() => modifiers.filter((item) => selectedModifiers.includes(item.id)).reduce((sum, item) => sum + (channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price), 0), [selectedModifiers, channel]);
-  const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id)).reduce((sum, item) => sum + (item.id === "standard" ? 75 : item.price * 2 * 0.35), 0), [additionalModifiers]);
+  const additionalModifierTotal = useMemo(() => modifiers.filter((item) => additionalModifiers.includes(item.id)).reduce((sum, item) => sum + (item.id === "standard" ? 150 * 0.35 : item.price * 2 * 0.35), 0), [additionalModifiers]);
   const additionalComplete = Boolean(wantsAdditional && additionalFrame && additionalLens);
   const additionalFramePrice = wantsAdditional && additionalFrame ? frames[additionalFrame].retail * 0.35 : 0;
   const additionalLensPrice = additionalComplete && additionalLens ? insuranceLensRetail[additionalLens] * 0.35 : 0;
@@ -162,7 +162,7 @@ export default function Home() {
         {channel === "insurance" && lens && <div className="summary-row"><span>{insuranceApplied ? "Adjusted lenses / modifiers" : "Retail lenses / modifiers"}</span><strong>{money(firstPairTotal - frames[frame!].retail)}</strong></div>}
         {channel === "inStore" && selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; return <div className="summary-row modifier-summary" key={id}><span>{item.name}</span><strong>{item.price >= 0 ? "+" : "-"}{money(Math.abs(item.price))}</strong></div>; })}
         {wantsAdditional && additionalFrame && additionalLens && <><div className="summary-divider" /><div className="summary-row"><span>Additional frame: {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div><div className="summary-row"><span>Additional {lenses[additionalLens].name}</span><strong>{money(additionalLensPrice)}</strong></div></>}
-        {additionalComplete && additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price * 2 * 0.35; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        {additionalComplete && additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 150 * 0.35 : item.price * 2 * 0.35; return <div className="summary-row modifier-summary" key={`additional-${id}`}><span>Additional: {item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
       </div><div className="total-row"><span>TOTAL</span><strong>{money(total)}</strong></div><Button className="copy-button" onClick={() => window.print()} disabled={!canPrint}><Printer />Print / Save PDF</Button><p className="quote-footnote">Every complete pair includes premium anti-reflective, scratch resistance, UV protection, and standard warranty unless modified.</p><div className="next-cue"><span>Complete each visible step</span><ChevronRight /></div></aside>
     </div>
     <section className="print-quote" aria-label="Printable sales quote">
@@ -178,7 +178,7 @@ export default function Home() {
       {additionalComplete && additionalFrame && additionalLens && <section className="print-section"><h2>Additional Pair</h2>
         <div className="print-line"><span>Frame — {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div>
         <div className="print-line"><span>{lenses[additionalLens].name} lenses</span><strong>{money(additionalLensPrice)}</strong></div>
-        {additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 75 : item.price * 2 * 0.35; return <div className="print-line print-option" key={`print-additional-${id}`}><span>{item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        {additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 150 * 0.35 : item.price * 2 * 0.35; return <div className="print-line print-option" key={`print-additional-${id}`}><span>{item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
         <div className="print-subtotal"><span>Additional-pair total</span><strong>{money(additionalBase + additionalModifierTotal)}</strong></div><p className="print-note">Same prescription required. Modifiers still apply.</p>
       </section>}
       <div className="print-total"><span>TOTAL</span><strong>{money(total)}</strong></div>
