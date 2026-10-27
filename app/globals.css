@@ -128,12 +128,17 @@ button { font: inherit; }
   .print-section { margin-top: 18px; break-inside: avoid; }
   .print-section h2 { margin: 0; padding: 9px 12px; background: #082b58; color: #fff; font-size: 15px; letter-spacing: .03em; }
   .print-line,.print-subtotal { display: grid; grid-template-columns: 1fr auto; gap: 20px; padding: 10px 12px; border-bottom: 1px solid #d9e0e7; font-size: 13px; }
+  .print-math small { display: block; margin-top: 3px; color: #66768a; font-size: 10px; font-weight: 500; }
+  .print-discount { color: #237052; font-weight: 700; }
   .print-option span { padding-left: 16px; color: #46586c; }
   .print-subtotal { border-bottom: 0; background: #f3f6f9; color: #082b58; font-weight: 700; }
   .print-note { margin: 8px 12px 0; color: #66768a; font-size: 11px; font-weight: 700; }
   .print-total { display: flex; align-items: baseline; justify-content: space-between; margin-top: 24px; padding: 15px 18px; border-top: 3px solid #ef4b12; background: #082b58; color: #fff; }
   .print-total span { font-size: 12px; letter-spacing: .18em; font-weight: 700; }
   .print-total strong { font-size: 28px; }
+  .print-total-discount { display: grid; justify-items: center; gap: 3px; margin: 12px auto 0; padding: 10px 22px; color: #237052; text-align: center; }
+  .print-total-discount span { font-size: 10px; font-weight: 800; letter-spacing: .16em; }
+  .print-total-discount strong { font-size: 23px; }
   .print-footer { margin-top: 20px; padding-top: 14px; border-top: 1px solid #d9e0e7; color: #46586c; font-size: 11px; }
   .print-footer p { margin: 4px 0 0; line-height: 1.45; }
   .print-signatures { display: grid; grid-template-columns: 2fr 1fr; gap: 28px; margin-top: 38px; }
