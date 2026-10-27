@@ -111,6 +111,20 @@ export default function Home() {
   const insuranceFactor = insurance === "vsp" ? 0.35 : 0.45;
   const firstPairTotal = channel === "insurance" && insuranceApplied && frame ? frames[frame].retail + (retailFirstPair - frames[frame].retail) * insuranceFactor : retailFirstPair;
   const total = examPrice + firstPairTotal + additionalBase + (additionalComplete ? additionalModifierTotal : 0);
+  const examDiscount = examMode === "withPurchase" && examType ? exams[examType].retail - exams[examType].withPurchase : 0;
+  const firstPairRetailValue = channel === "insurance"
+    ? retailFirstPair
+    : saleType === "pof" && frame
+      ? frames[frame].retail + modifierTotal
+      : saleType === "complete" && frame && lens
+        ? frames[frame].retail + insuranceLensRetail[lens] + modifierTotal
+        : firstPairTotal;
+  const firstPairDiscount = Math.max(0, firstPairRetailValue - firstPairTotal);
+  const additionalRetailValue = additionalComplete && additionalFrame && additionalLens
+    ? frames[additionalFrame].retail + insuranceLensRetail[additionalLens] + modifiers.filter((item) => additionalModifiers.includes(item.id)).reduce((sum, item) => sum + (item.id === "standard" ? 150 : item.price * 2), 0)
+    : 0;
+  const additionalDiscount = Math.max(0, additionalRetailValue - (additionalBase + (additionalComplete ? additionalModifierTotal : 0)));
+  const totalDiscount = examDiscount + firstPairDiscount + additionalDiscount;
   const examComplete = wantsExam === false || Boolean(wantsExam && examMode && examType);
   const examOnly = Boolean(wantsExam && examMode === "only" && examType);
   const purchaseFlow = wantsExam === false || Boolean(wantsExam && examMode === "withPurchase" && examType);
@@ -195,20 +209,22 @@ export default function Home() {
       <div className="print-meta"><div><span>Pricing</span><strong>{channel === "insurance" ? insurance ? insuranceNames[insurance] : "Insurance" : "In-Store"}</strong></div><div><span>Frame collection</span><strong>{frame ? frames[frame].name : "—"}</strong></div></div>
       {examOnly && examType && <section className="print-section"><h2>Exam</h2><div className="print-line"><span>{exams[examType].name} exam — Exam Only</span><strong>{money(examPrice)}</strong></div></section>}
       {!examOnly && <section className="print-section"><h2>First Pair</h2>
-        {channel === "insurance" && frame && <div className="print-line"><span>Frame — {frames[frame].name}</span><strong>{money(frames[frame].retail)}</strong></div>}
-        {channel === "insurance" && lens && <div className="print-line"><span>{lenses[lens].name} lenses</span><strong>{money(insuranceLensRetail[lens] * (insuranceApplied ? insuranceFactor : 1))}</strong></div>}
-        {channel === "inStore" && saleType && <div className="print-line"><span>{saleType === "pof" ? `POF sale — ${frame ? frames[frame].name : ""}` : `${lens ? lenses[lens].name : "Complete"} complete pair`}</span><strong>{money(basePrice)}</strong></div>}
-        {selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const retail = channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price; const price = channel === "insurance" && insuranceApplied ? retail * insuranceFactor : retail; const name = channel === "insurance" && item.id === "standard" ? "Anti-Reflective" : item.name; return <div className="print-line print-option" key={`print-${id}`}><span>{name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        {channel === "insurance" && frame && <div className="print-line print-math"><span>Frame — {frames[frame].name}<small>{money(frames[frame].retail)} retail − {money(0)} discount</small></span><strong>{money(frames[frame].retail)}</strong></div>}
+        {channel === "insurance" && lens && <div className="print-line print-math"><span>{lenses[lens].name} lenses<small>{money(insuranceLensRetail[lens])} retail − {money(insuranceLensRetail[lens] * (1 - insuranceFactor))} insurance discount</small></span><strong>{money(insuranceLensRetail[lens] * (insuranceApplied ? insuranceFactor : 1))}</strong></div>}
+        {channel === "inStore" && saleType === "pof" && frame && <div className="print-line print-math"><span>POF sale — {frames[frame].name}<small>{money(frames[frame].retail)} retail − {money(frames[frame].retail - basePrice)} discount</small></span><strong>{money(basePrice)}</strong></div>}
+        {channel === "inStore" && saleType === "complete" && frame && lens && <><div className="print-line"><span>Frame retail — {frames[frame].name}</span><strong>{money(frames[frame].retail)}</strong></div><div className="print-line"><span>Lens retail — {lenses[lens].name}</span><strong>{money(insuranceLensRetail[lens])}</strong></div><div className="print-line print-discount"><span>Complete-pair package discount</span><strong>−{money(frames[frame].retail + insuranceLensRetail[lens] - basePrice)}</strong></div><div className="print-line"><span>Complete-pair charge</span><strong>{money(basePrice)}</strong></div></>}
+        {selectedModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const retail = channel === "insurance" ? item.id === "standard" ? 150 : item.price * 2 : item.price; const price = channel === "insurance" && insuranceApplied ? retail * insuranceFactor : retail; const discount = channel === "insurance" ? retail - price : 0; const name = channel === "insurance" && item.id === "standard" ? "Anti-Reflective" : item.name; return <div className={`print-line print-option ${channel === "insurance" ? "print-math" : ""}`} key={`print-${id}`}><span>{name}{channel === "insurance" && <small>{money(retail)} retail − {money(discount)} insurance discount</small>}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
         <div className="print-subtotal"><span>First-pair total</span><strong>{money(firstPairTotal)}</strong></div>
       </section>}
-      {examMode === "withPurchase" && examType && <section className="print-section"><h2>Exam Added After Purchase Pricing</h2><div className="print-line"><span>{exams[examType].name} exam — With Purchase</span><strong>{money(examPrice)}</strong></div></section>}
+      {examMode === "withPurchase" && examType && <section className="print-section"><h2>Exam Added After Purchase Pricing</h2><div className="print-line print-math"><span>{exams[examType].name} exam — With Purchase<small>{money(exams[examType].retail)} retail − {money(examDiscount)} purchase discount</small></span><strong>{money(examPrice)}</strong></div></section>}
       {additionalComplete && additionalFrame && additionalLens && <section className="print-section"><h2>Additional Pair</h2>
-        <div className="print-line"><span>Frame — {frames[additionalFrame].name}</span><strong>{money(additionalFramePrice)}</strong></div>
-        <div className="print-line"><span>{lenses[additionalLens].name} lenses</span><strong>{money(additionalLensPrice)}</strong></div>
-        {additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const price = item.id === "standard" ? 150 * 0.35 : item.price * 2 * 0.35; return <div className="print-line print-option" key={`print-additional-${id}`}><span>{item.id === "standard" ? "Anti-Reflective" : item.name}</span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
+        <div className="print-line print-math"><span>Frame — {frames[additionalFrame].name}<small>{money(frames[additionalFrame].retail)} retail − {money(frames[additionalFrame].retail - additionalFramePrice)} discount</small></span><strong>{money(additionalFramePrice)}</strong></div>
+        <div className="print-line print-math"><span>{lenses[additionalLens].name} lenses<small>{money(insuranceLensRetail[additionalLens])} retail − {money(insuranceLensRetail[additionalLens] - additionalLensPrice)} discount</small></span><strong>{money(additionalLensPrice)}</strong></div>
+        {additionalModifiers.map((id) => { const item = modifiers.find((option) => option.id === id)!; const retail = item.id === "standard" ? 150 : item.price * 2; const price = retail * 0.35; return <div className="print-line print-option print-math" key={`print-additional-${id}`}><span>{item.id === "standard" ? "Anti-Reflective" : item.name}<small>{money(retail)} retail − {money(retail - price)} discount</small></span><strong>{price >= 0 ? "+" : "-"}{money(Math.abs(price))}</strong></div>; })}
         <div className="print-subtotal"><span>Additional-pair total</span><strong>{money(additionalBase + additionalModifierTotal)}</strong></div><p className="print-note">Same prescription required. Modifiers still apply.</p>
       </section>}
       <div className="print-total"><span>TOTAL</span><strong>{money(total)}</strong></div>
+      <div className="print-total-discount"><span>TOTAL DISCOUNT</span><strong>{money(totalDiscount)}</strong></div>
       <footer className="print-footer"><strong>Complete-pair benefits</strong><p>Premium anti-reflective, scratch resistance, UV protection, and standard warranty are included unless modified.</p><div className="print-signatures"><span>Customer approval</span><span>Date</span></div></footer>
     </section>
   </main>;
