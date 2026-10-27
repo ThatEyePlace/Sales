@@ -217,7 +217,6 @@ export default function Home() {
     <section className="print-quote" aria-label="Printable sales quote">
       <header className="print-header"><div className="print-brand"><Glasses aria-hidden="true" /><div><strong>THAT EYE PLACE</strong><span>Sales Quote</span></div></div><div className="print-date">Prepared {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div></header>
       <div className="print-meta"><div><span>Pricing</span><strong>{channel === "insurance" ? insurance ? insuranceNames[insurance] : "Insurance" : "In-Store"}</strong></div><div><span>Frame collection</span><strong>{frame ? frames[frame].name : "—"}</strong></div></div>
-      <div className="print-arrival"><span>EXPECTED ARRIVAL DATE:</span><strong>{expectedArrivalDate()}</strong></div>
       {examOnly && examType && <section className="print-section"><h2>Exam</h2><div className="print-line"><span>{exams[examType].name} exam — Exam Only</span><strong>{money(examPrice)}</strong></div></section>}
       {!examOnly && <section className="print-section"><h2>First Pair</h2>
         {channel === "insurance" && frame && <div className="print-line print-math"><span>Frame — {frames[frame].name}<small>{money(frames[frame].retail)} retail − {money(0)} discount</small></span><strong>{money(frames[frame].retail)}</strong></div>}
@@ -236,6 +235,7 @@ export default function Home() {
       </section>}
       <div className="print-total"><span>TOTAL</span><strong>{money(total)}</strong></div>
       <div className="print-total-discount"><span>TOTAL DISCOUNT</span><strong>{money(totalDiscount)}</strong></div>
+      <div className="print-arrival"><span>EXPECTED ARRIVAL DATE:</span><strong>{expectedArrivalDate()}</strong></div>
       <footer className="print-footer"><strong>Complete-pair benefits</strong><p>Premium anti-reflective, scratch resistance, UV protection, and standard warranty are included unless modified.</p><div className="print-signatures"><span>Customer approval</span><span>Date</span></div></footer>
     </section>
   </main>;
