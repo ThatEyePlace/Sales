@@ -125,6 +125,9 @@ button { font: inherit; }
   .print-meta > div { padding: 12px 14px; border: 1px solid #d9e0e7; border-radius: 8px; display: grid; gap: 4px; }
   .print-meta span { color: #66768a; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
   .print-meta strong { color: #082b58; font-size: 15px; }
+  .print-arrival { display: grid; justify-items: center; gap: 4px; margin: 14px 0 18px; padding: 13px 16px; border: 3px solid #ef4b12; color: #082b58; text-align: center; }
+  .print-arrival span { font-size: 15px; font-weight: 900; letter-spacing: .08em; }
+  .print-arrival strong { font-size: 21px; font-weight: 900; }
   .print-section { margin-top: 18px; break-inside: avoid; }
   .print-section h2 { margin: 0; padding: 9px 12px; background: #082b58; color: #fff; font-size: 15px; letter-spacing: .03em; }
   .print-line,.print-subtotal { display: grid; grid-template-columns: 1fr auto; gap: 20px; padding: 10px 12px; border-bottom: 1px solid #d9e0e7; font-size: 13px; }
