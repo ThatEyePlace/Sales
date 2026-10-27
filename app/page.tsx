@@ -10,6 +10,7 @@ type SaleType = "pof" | "complete";
 type Lens = "core" | "strong" | "clear";
 type Channel = "insurance" | "inStore";
 type Insurance = "vsp" | "eyemed" | "misc";
+type ExamType = "glasses" | "contacts" | "combo";
 
 const frames: Record<Frame, { name: string; retail: number; accent: string }> = {
   redGreen: { name: "RED / GREEN", retail: 100, accent: "split" },
@@ -29,6 +30,11 @@ const completePrices: Record<Lens, Record<Frame, number>> = {
 };
 const insuranceLensRetail: Record<Lens, number> = { core: 300, strong: 400, clear: 600 };
 const insuranceNames: Record<Insurance, string> = { vsp: "VSP", eyemed: "EyeMed", misc: "Misc" };
+const exams: Record<ExamType, { name: string; price: number }> = {
+  glasses: { name: "Glasses", price: 75 },
+  contacts: { name: "Contacts", price: 95 },
+  combo: { name: "Combo", price: 170 },
+};
 const modifiers = [
   { id: "standard", name: "Remove Anti-Reflective", price: -75, group: "VISION" },
   { id: "shift", name: "Shift™", price: 90, group: "VISION" },
@@ -74,6 +80,8 @@ export default function Home() {
   const [channel, setChannel] = useState<Channel | null>(null);
   const [insurance, setInsurance] = useState<Insurance | null>(null);
   const [insuranceApplied, setInsuranceApplied] = useState(false);
+  const [wantsExam, setWantsExam] = useState<boolean | null>(null);
+  const [examType, setExamType] = useState<ExamType | null>(null);
   const [frame, setFrame] = useState<Frame | null>(null);
   const [saleType, setSaleType] = useState<SaleType | null>(null);
   const [lens, setLens] = useState<Lens | null>(null);
@@ -96,13 +104,15 @@ export default function Home() {
   const additionalFramePrice = wantsAdditional && additionalFrame ? frames[additionalFrame].retail * 0.35 : 0;
   const additionalLensPrice = additionalComplete && additionalLens ? insuranceLensRetail[additionalLens] * 0.35 : 0;
   const additionalBase = additionalComplete ? additionalLensPrice + additionalFramePrice : 0;
+  const examPrice = wantsExam && examType ? exams[examType].price : 0;
   const retailFirstPair = basePrice + modifierTotal;
   const insuranceFactor = insurance === "vsp" ? 0.35 : 0.45;
   const firstPairTotal = channel === "insurance" && insuranceApplied && frame ? frames[frame].retail + (retailFirstPair - frames[frame].retail) * insuranceFactor : retailFirstPair;
-  const total = firstPairTotal + additionalBase + (additionalComplete ? additionalModifierTotal : 0);
+  const total = examPrice + firstPairTotal + additionalBase + (additionalComplete ? additionalModifierTotal : 0);
+  const examComplete = wantsExam === false || Boolean(wantsExam && examType);
   const readyForModifiers = channel === "insurance" ? Boolean(frame && insurance && lens) : Boolean(frame && saleType && (saleType === "pof" || lens));
   const readyForAdditional = readyForModifiers && wantsModifiers !== null && (channel !== "insurance" || insuranceApplied);
-  const canPrint = channel === "insurance" ? Boolean(insuranceApplied && frame && lens) : Boolean(readyForModifiers && wantsModifiers !== null);
+  const canPrint = examComplete && (channel === "insurance" ? Boolean(insuranceApplied && frame && lens) : Boolean(readyForModifiers && wantsModifiers !== null));
 
   const toggle = (id: string, current: string[], setter: (value: string[]) => void) => setter(current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   const selectSaleType = (next: SaleType) => {
@@ -110,11 +120,11 @@ export default function Home() {
     if (next === "pof") setLens(null);
   };
   const selectChannel = (next: Channel) => {
-    setChannel(next); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]);
+    setChannel(next); setInsurance(null); setInsuranceApplied(false); setWantsExam(null); setExamType(null); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]);
   };
   const invalidateInsurance = () => { setInsuranceApplied(false); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); };
   const reset = () => {
-    setChannel(null); setInsurance(null); setInsuranceApplied(false); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]);
+    setChannel(null); setInsurance(null); setInsuranceApplied(false); setWantsExam(null); setExamType(null); setFrame(null); setSaleType(null); setLens(null); setWantsModifiers(null); setSelectedModifiers([]); setWantsAdditional(null); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]);
   };
 
   return <main>
@@ -129,22 +139,28 @@ export default function Home() {
         {channel === "insurance" && <section className="step-card reveal"><div className="step-heading"><div><h2>Select the insurance</h2><p>The plan adjustment is applied after the first pair is built.</p></div></div><div className="choice-grid three">
           {(Object.keys(insuranceNames) as Insurance[]).map((id) => <ChoiceCard key={id} active={insurance === id} title={insuranceNames[id]} onClick={() => { setInsurance(id); invalidateInsurance(); }} />)}
         </div></section>}
-        {channel && (channel === "inStore" || insurance) && <section className="step-card reveal"><div className="step-heading"><span>1</span><div><h2>Select the frame collection</h2><p>{channel === "insurance" ? "Insurance retail frame price." : "Retail price shown for reference."}</p></div></div><div className="choice-grid three">
+        {channel && (channel === "inStore" || insurance) && <section className="step-card reveal"><div className="step-heading"><span>1</span><div><h2>Exam?</h2><p>Add an exam to this quote before selecting the frame.</p></div></div><div className="yes-no">
+          <button type="button" className={wantsExam === false ? "active" : ""} onClick={() => { setWantsExam(false); setExamType(null); invalidateInsurance(); }}>No</button>
+          <button type="button" className={wantsExam === true ? "active" : ""} onClick={() => { setWantsExam(true); invalidateInsurance(); }}>Yes</button>
+        </div>{wantsExam && <div className="choice-grid three lenses compact">
+          {(Object.keys(exams) as ExamType[]).map((id) => <ChoiceCard key={id} active={examType === id} title={exams[id].name} price={money(exams[id].price)} onClick={() => { setExamType(id); invalidateInsurance(); }} />)}
+        </div>}</section>}
+        {channel && (channel === "inStore" || insurance) && examComplete && <section className="step-card reveal"><div className="step-heading"><span>2</span><div><h2>Select the frame collection</h2><p>{channel === "insurance" ? "Insurance retail frame price." : "Retail price shown for reference."}</p></div></div><div className="choice-grid three">
           {(Object.keys(frames) as Frame[]).map((id) => <ChoiceCard key={id} active={frame === id} title={frames[id].name} detail={id === "pof" ? channel === "inStore" ? "Patient's own frame · $50 off complete pair" : "Patient's own frame" : `${money(frames[id].retail)} retail`} accent={frames[id].accent} onClick={() => { setFrame(id); invalidateInsurance(); if (channel === "inStore" && id === "pof") selectSaleType("complete"); }} />)}
         </div></section>}
-        {channel === "inStore" && frame && frame !== "pof" && <section className="step-card reveal"><div className="step-heading"><span>2</span><div><h2>What type of sale?</h2><p>Choose POF pricing or a complete pair.</p></div></div><div className="choice-grid two">
+        {channel === "inStore" && frame && frame !== "pof" && <section className="step-card reveal"><div className="step-heading"><span>3</span><div><h2>What type of sale?</h2><p>Choose POF pricing or a complete pair.</p></div></div><div className="choice-grid two">
           <ChoiceCard active={saleType === "pof"} title="POF" detail="50% of frame retail" price={money(frames[frame].retail / 2)} onClick={() => selectSaleType("pof")} />
           <ChoiceCard active={saleType === "complete"} title="COMPLETE SALE" detail="Frame + complete lenses" onClick={() => selectSaleType("complete")} />
         </div></section>}
-        {((channel === "inStore" && saleType === "complete") || (channel === "insurance" && frame)) && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "2" : "3"}</span><div><h2>Select the complete-pair package</h2><p>{channel === "insurance" ? "Retail includes the frame and doubled in-house lens price." : "Pricing includes the selected frame collection."}</p></div></div><div className="choice-grid three lenses">
+        {((channel === "inStore" && saleType === "complete") || (channel === "insurance" && frame)) && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "3" : "4"}</span><div><h2>Select the complete-pair package</h2><p>{channel === "insurance" ? "Retail includes the frame and doubled in-house lens price." : "Pricing includes the selected frame collection."}</p></div></div><div className="choice-grid three lenses">
           {(Object.keys(lenses) as Lens[]).map((id) => <ChoiceCard key={id} active={lens === id} title={lenses[id].name} detail={lenses[id].note} price={frame ? money(channel === "insurance" ? frames[frame].retail + insuranceLensRetail[id] : completePrices[id][frame]) : undefined} onClick={() => { setLens(id); invalidateInsurance(); }} />)}
         </div></section>}
-        {readyForModifiers && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "3" : saleType === "complete" ? "4" : "3"}</span><div><h2>Any modifiers?</h2><p>{channel === "insurance" ? "First-pair modifiers use insurance retail pricing." : "Each selected modifier changes the running total."}</p></div></div><div className="yes-no">
+        {readyForModifiers && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "4" : saleType === "complete" ? "5" : "4"}</span><div><h2>Any modifiers?</h2><p>{channel === "insurance" ? "First-pair modifiers use insurance retail pricing." : "Each selected modifier changes the running total."}</p></div></div><div className="yes-no">
           <button type="button" className={wantsModifiers === false ? "active" : ""} onClick={() => { setWantsModifiers(false); setSelectedModifiers([]); invalidateInsurance(); }}>No modifiers</button>
           <button type="button" className={wantsModifiers === true ? "active" : ""} onClick={() => { setWantsModifiers(true); invalidateInsurance(); }}>Yes, select modifiers</button>
         </div>{wantsModifiers && <ModifierGrid selected={selectedModifiers} multiplier={channel === "insurance" ? 2 : 1} insurancePrimary={channel === "insurance"} onToggle={(id) => { toggle(id, selectedModifiers, setSelectedModifiers); invalidateInsurance(); }} />}</section>}
-        {channel === "insurance" && readyForModifiers && wantsModifiers !== null && <section className="step-card reveal"><div className="step-heading"><span>4</span><div><h2>Apply insurance</h2><p>Confirm the first-pair retail selections before adding another pair.</p></div></div><div className="insurance-apply"><div><span>Retail submitted</span><strong>{money(retailFirstPair)}</strong></div><button type="button" className={insuranceApplied ? "applied" : ""} onClick={() => setInsuranceApplied(true)}>{insuranceApplied ? "Insurance Applied" : "Apply Insurance"}</button></div></section>}
-        {readyForAdditional && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "5" : saleType === "complete" ? "5" : "4"}</span><div><h2>Add another complete pair?</h2><p>Same prescription required. Modifiers still apply.</p></div></div><div className="yes-no">
+        {channel === "insurance" && readyForModifiers && wantsModifiers !== null && <section className="step-card reveal"><div className="step-heading"><span>5</span><div><h2>Apply insurance</h2><p>Confirm the first-pair retail selections before adding another pair.</p></div></div><div className="insurance-apply"><div><span>Retail submitted</span><strong>{money(retailFirstPair)}</strong></div><button type="button" className={insuranceApplied ? "applied" : ""} onClick={() => setInsuranceApplied(true)}>{insuranceApplied ? "Insurance Applied" : "Apply Insurance"}</button></div></section>}
+        {readyForAdditional && <section className="step-card reveal"><div className="step-heading"><span>{channel === "insurance" ? "6" : saleType === "complete" ? "6" : "5"}</span><div><h2>Add another complete pair?</h2><p>Same prescription required. Modifiers still apply.</p></div></div><div className="yes-no">
           <button type="button" className={wantsAdditional === false ? "active" : ""} onClick={() => { setWantsAdditional(false); setAdditionalFrame(null); setAdditionalLens(null); setAdditionalModifiers([]); }}>No additional pair</button>
           <button type="button" className={wantsAdditional === true ? "active" : ""} onClick={() => { setWantsAdditional(true); setAdditionalFrame(null); setAdditionalLens(null); }}>Yes, add a pair</button>
         </div>{wantsAdditional && <div className="additional-panel"><h3>Additional-pair frame</h3><p className="included-note">Select an option to show its final 65%-off price.</p><div className="choice-grid three lenses compact">
@@ -156,6 +172,8 @@ export default function Home() {
       <aside className="quote-card" aria-live="polite"><div className="quote-title"><ReceiptText aria-hidden="true" /><div><span>RUNNING QUOTE</span><strong>Sale Summary</strong></div></div><div className="summary-lines">
         {!frame && <div className="empty-summary"><Glasses /><p>Start by selecting a frame collection.</p></div>}
         {channel && <div className="summary-row"><span>Sale source</span><strong>{channel === "insurance" ? insurance ? insuranceNames[insurance] : "Insurance" : "In-Store"}</strong></div>}
+        {wantsExam === false && <div className="summary-row"><span>Exam</span><strong>No</strong></div>}
+        {wantsExam && examType && <div className="summary-row"><span>{exams[examType].name} exam</span><strong>{money(examPrice)}</strong></div>}
         {frame && <div className="summary-row"><span>Frame collection</span><strong>{frames[frame].name}</strong></div>}
         {channel === "insurance" && frame && <div className="summary-row"><span>Frame charge</span><strong>{money(frames[frame].retail)}</strong></div>}
         {channel === "inStore" && saleType && <div className="summary-row"><span>{saleType === "pof" ? "POF sale" : lens ? lenses[lens].name : "Complete sale"}</span><strong>{basePrice ? money(basePrice) : "—"}</strong></div>}
@@ -168,6 +186,7 @@ export default function Home() {
     <section className="print-quote" aria-label="Printable sales quote">
       <header className="print-header"><div className="print-brand"><Glasses aria-hidden="true" /><div><strong>THAT EYE PLACE</strong><span>Sales Quote</span></div></div><div className="print-date">Prepared {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div></header>
       <div className="print-meta"><div><span>Pricing</span><strong>{channel === "insurance" ? insurance ? insuranceNames[insurance] : "Insurance" : "In-Store"}</strong></div><div><span>Frame collection</span><strong>{frame ? frames[frame].name : "—"}</strong></div></div>
+      {wantsExam && examType && <section className="print-section"><h2>Exam</h2><div className="print-line"><span>{exams[examType].name} exam</span><strong>{money(examPrice)}</strong></div></section>}
       <section className="print-section"><h2>First Pair</h2>
         {channel === "insurance" && frame && <div className="print-line"><span>Frame — {frames[frame].name}</span><strong>{money(frames[frame].retail)}</strong></div>}
         {channel === "insurance" && lens && <div className="print-line"><span>{lenses[lens].name} lenses</span><strong>{money(insuranceLensRetail[lens] * (insuranceApplied ? insuranceFactor : 1))}</strong></div>}
