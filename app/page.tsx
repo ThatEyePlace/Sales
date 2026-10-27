@@ -49,6 +49,16 @@ const modifiers = [
 ] as const;
 
 const money = (value: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: Number.isInteger(value) ? 0 : 2, maximumFractionDigits: 2 }).format(value);
+const expectedArrivalDate = (saleDate = new Date()) => {
+  const date = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate(), 12);
+  while (date.getDay() !== 3 && date.getDay() !== 5) date.setDate(date.getDate() + 1);
+  let laterMailDays = 0;
+  while (laterMailDays < 2) {
+    date.setDate(date.getDate() + 1);
+    if (date.getDay() === 3 || date.getDay() === 5) laterMailDays += 1;
+  }
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+};
 
 function ChoiceCard({ active, title, detail, price, onClick, accent }: { active: boolean; title: string; detail?: string; price?: string; onClick: () => void; accent?: string }) {
   return <button type="button" aria-pressed={active} onClick={onClick} className={`choice-card ${active ? "choice-card-active" : ""}`}>
@@ -207,6 +217,7 @@ export default function Home() {
     <section className="print-quote" aria-label="Printable sales quote">
       <header className="print-header"><div className="print-brand"><Glasses aria-hidden="true" /><div><strong>THAT EYE PLACE</strong><span>Sales Quote</span></div></div><div className="print-date">Prepared {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div></header>
       <div className="print-meta"><div><span>Pricing</span><strong>{channel === "insurance" ? insurance ? insuranceNames[insurance] : "Insurance" : "In-Store"}</strong></div><div><span>Frame collection</span><strong>{frame ? frames[frame].name : "—"}</strong></div></div>
+      <div className="print-arrival"><span>EXPECTED ARRIVAL DATE:</span><strong>{expectedArrivalDate()}</strong></div>
       {examOnly && examType && <section className="print-section"><h2>Exam</h2><div className="print-line"><span>{exams[examType].name} exam — Exam Only</span><strong>{money(examPrice)}</strong></div></section>}
       {!examOnly && <section className="print-section"><h2>First Pair</h2>
         {channel === "insurance" && frame && <div className="print-line print-math"><span>Frame — {frames[frame].name}<small>{money(frames[frame].retail)} retail − {money(0)} discount</small></span><strong>{money(frames[frame].retail)}</strong></div>}
